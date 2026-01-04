@@ -154,6 +154,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+#ZumbiBot session files
+ZumbiBot.session
+
 # pytype static type analyzer
 .pytype/
 

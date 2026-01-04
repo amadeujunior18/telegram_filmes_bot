@@ -1,0 +1,7 @@
+telethon==1.41.2
+python-dotenv==1.1.1
+cryptg
+hachoir
+aiohttp
+aiofiles
+FastTelethonhelper
