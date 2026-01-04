@@ -5,3 +5,4 @@ hachoir
 aiohttp
 aiofiles
 FastTelethonhelper
+fuzzywuzzy[speedup]

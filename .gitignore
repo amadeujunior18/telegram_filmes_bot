@@ -155,7 +155,8 @@ dmypy.json
 .pyre/
 
 #ZumbiBot session files
-ZumbiBot.session
+*.session
+*.session-journal
 
 # pytype static type analyzer
 .pytype/

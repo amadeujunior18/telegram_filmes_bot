@@ -114,6 +114,7 @@ async def perform_download(status_msg, original_msg, info):
     else:
         target_dir = os.path.join(DOWNLOAD_DIR, "Outros", info["name"])
         ext = os.path.splitext(file_name)[1] or ".mp4"
+        # Renomeia o arquivo para o nome limpo detectado
         final_name = sanitize_filename(f"{info['name']}{ext}")
 
     os.makedirs(target_dir, exist_ok=True)
@@ -167,6 +168,19 @@ async def perform_download(status_msg, original_msg, info):
         
         await status_msg.edit(f"✅ Concluído: `{final_name}`")
         logger.info(f"Download finalizado e movido para: {final_file_path}")
+        
+        # 3. Cria arquivo de informações (Metadata Rica)
+        if info.get('synopsis') or info.get('genres'):
+            info_txt_path = os.path.join(target_dir, "info.txt")
+            if not os.path.exists(info_txt_path):
+                with open(info_txt_path, "w", encoding="utf-8") as f:
+                    f.write(f"Título: {info['name']}\n")
+                    if info.get('year'): f.write(f"Ano: {info['year']}\n")
+                    if info.get('genres'): f.write(f"Gêneros: {info['genres']}\n")
+                    if info.get('synopsis'):
+                        f.write("\nSinopse:\n")
+                        f.write(info['synopsis'])
+                logger.info(f"Arquivo info.txt criado em: {target_dir}")
         
     except Exception as e:
         logger.error(f"Erro no download: {e}", exc_info=True)

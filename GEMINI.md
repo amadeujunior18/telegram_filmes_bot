@@ -34,20 +34,29 @@ Para manter a estrutura de pastas limpa, o bot redireciona todos os arquivos com
 
 ---
 
-## 🧠 Lógica de Detecção Inteligente (`parser.py`)
+## 🧠 Lógica de Detecção Híbrida (`parser.py` + `metadata_fetcher.py`)
 
-O bot utiliza uma abordagem de **Prioridade e Comparação**:
-1.  Analisa a **Legenda (Caption)**.
-2.  Analisa o **Nome do Arquivo**.
-3.  **Decisão:** Se a legenda for insuficiente (ex: apenas um número), o nome do arquivo é priorizado.
+O bot utiliza uma abordagem de **Prioridade e Refinamento Externo**:
+1.  **Parser Local:** Tenta identificar o tipo e nome via regex (rápido).
+2.  **Validação Staging:** Se o nome for genérico (ex: "arquivo desconhecido"), o bot utiliza a **Legenda Original** como fonte de busca.
+3.  **Consulta TMDb (Opcional):** Se `ENABLE_TMDB=True`, o bot interage com o `@tmdbinfobot` via conversa privada:
+    *   Envia `/filme` ou `/serie` conforme a suspeita inicial.
+    *   Realiza **Fuzzy Matching** (token_sort_ratio) nos botões de retorno.
+    *   **Simulação de Clique:** Clica no botão para extrair a Sinopse e Gêneros oficiais.
+4.  **Normalização Final:** 
+    *   Renomeia arquivos mesmo na categoria `Outros` para garantir legibilidade.
+    *   Colapsa espaços duplos e remove caracteres especiais (sanitização).
 
-### Padrões Suportados:
-*   **Séries Padrão:** `S01E01`, `1x01`.
-*   **Animes / Episódios Simples:** 
-    *   Identifica o separador ` - ` e extrai o título corretamente.
-    *   **Inteligência de Temporada:** Detecta números de temporada no final do título (ex: `Anime Name 2` -> Season 2).
-*   **Filmes:** Detecta anos (`1900`-`2099`).
-*   **Sanitização:** Remove menções (`@canal`), limpa `#hashtags` e remove tags técnicas (`1080p`, `x264`, etc) preservando nomes limpos para as pastas.
+## 🛡️ Testes e Qualidade (`tests/`)
+...
+*   **Parser Test:** `python tests/test_parser.py` (Valida lógica local).
+*   **Metadata Test:** `python tests/test_metadata.py` (Valida conversa com bot externo).
+
+## 📁 Estrutura de Metadados
+Após o download, o bot gera um `info.txt` contendo:
+*   Título Oficial e Ano.
+*   Lista de Gêneros.
+*   Sinopse completa (para indexação em servidores de mídia como Plex/Jellyfin).
 
 ## 📋 Logs
 Localizados em `/log/bot.log`, registram todo o ciclo de vida da mídia, desde a string original recebida até a confirmação de movimentação para o disco final.

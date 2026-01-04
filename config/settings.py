@@ -11,6 +11,7 @@ API_HASH = os.getenv("API_HASH")
 SESSION_NAME = os.getenv("SESSION_NAME")
 CHAT_ID = int(os.getenv("CHAT_ID"))
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR")
+ENABLE_TMDB = os.getenv("ENABLE_TMDB", "True").lower() == "true"
 
 # Cria diretório de downloads se não existir
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)

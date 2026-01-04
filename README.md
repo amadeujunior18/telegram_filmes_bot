@@ -5,49 +5,24 @@ Este é um bot de automação para o Telegram desenvolvido com a biblioteca **Te
 ## 🚀 Funcionalidades
 
 - **Monitoramento em tempo real:** Baixa automaticamente novos vídeos ou documentos postados no chat configurado.
+- **Inteligência Artificial de Metadados (TMDb):** Integração com bot externo para validar nomes oficiais, anos de lançamento, gêneros e sinopses.
 - **Organização Automática:**
-  - **Filmes:** Identifica o nome e o ano, criando uma pasta para o filme.
-  - **Séries:** Detecta o padrão `SxxExx`, organiza por nome da série e número da temporada.
-- **Feedback Visual:** Envia mensagens de progresso no chat, informando a porcentagem, velocidade de download e tempo estimado (ETR).
-- **Logs Detalhados:** Sistema de logs com rotação diária para facilitar a depuração e monitoramento.
+  - **Filmes:** Nome oficial e ano, ex: `Filmes/O Poderoso Chefão (1972)/...`
+  - **Séries:** Nome limpo e temporadas, ex: `Series/Breaking Bad/Season 01/...`
+- **Geração de info.txt:** Cria automaticamente um arquivo de texto com a sinopse e detalhes técnicos na pasta do download.
+- **Feedback Visual:** Envia mensagens de progresso no chat, informando etapas da busca no TMDb, porcentagem de download e velocidade.
+- **Logs Detalhados:** Sistema de logs com rotação diária para monitoramento.
 - **Prevenção de Duplicatas:** Verifica se o arquivo já existe antes de iniciar o download.
 
 ## 🛠️ Pré-requisitos
-
-- Python 3.10 ou superior
-- Uma conta no Telegram e credenciais de API ([my.telegram.org](https://my.telegram.org))
-
-## 📦 Instalação
-
-1.  **Clone o repositório:**
-    ```bash
-    git clone <url-do-repositorio>
-    cd telegram_filmes_bot
-    ```
-
-2.  **Crie e ative um ambiente virtual:**
-    ```bash
-    python -m venv venv
-    # No Windows:
-    .\venv\Scripts\activate
-    # No Linux/Mac:
-    source venv/bin/activate
-    ```
-
-3.  **Instale as dependências:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-    *(Caso não tenha o arquivo requirements.txt, instale manualmente: `pip install telethon python-dotenv`)*
-
-4.  **Configure as variáveis de ambiente:**
-    Crie um arquivo `.env` na raiz do projeto com as seguintes chaves:
+...
     ```env
     API_ID=seu_api_id
     API_HASH=seu_api_hash
     SESSION_NAME=ZumbiBot
-    CHAT_ID=-100xxxxxxxxxx  # ID do chat que o bot deve monitorar
-    DOWNLOAD_DIR=D:/Downloads/Telegram  # Caminho onde os arquivos serão salvos
+    CHAT_ID=-100xxxxxxxxxx
+    DOWNLOAD_DIR=D:/Downloads/Telegram
+    ENABLE_TMDB=True  # Ativa/Desativa consulta externa de metadados
     ```
 
 ## 🚀 Como usar
@@ -78,6 +53,22 @@ Downloads/
 ## 📝 Logs
 
 Os logs são salvos na pasta `/log` e são rotacionados diariamente, mantendo um histórico de até 30 dias.
+
+## 🧪 Testes e Desenvolvimento
+
+O projeto conta com uma suíte de testes unitários para garantir que a lógica de detecção de nomes (Parser) continue funcionando corretamente com diferentes formatos de arquivos e legendas.
+
+Para executar os testes:
+```bash
+python tests/test_parser.py
+```
+
+Isso validará casos críticos como:
+- Animes com nome simples ou temporada no título.
+- Séries padrão (`SxxExx`).
+- Filmes com ano no nome.
+- Fallback inteligente quando a legenda falha.
+- Suporte a caracteres acentuados (ex: "Episódio").
 
 ## ⚖️ Licença
 

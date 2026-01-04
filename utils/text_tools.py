@@ -15,7 +15,9 @@ def sanitize_filename(name):
 def clean_release_name(text):
     """Limpa tags de release scene, mantendo o nome limpo."""
     if not text: return ""
-    text = re.sub(r"[._]+", " ", text)
+    
+    # Substitui separadores comuns por espaço
+    text = re.sub(r"[._:]+", " ", text)
     
     # Remove menções (@canal) inteiras
     text = re.sub(r'@\w+', '', text)
@@ -37,4 +39,8 @@ def clean_release_name(text):
     
     text = re.sub(r'[\[\]\(\)\{\}]', '', text)
     text = re.sub(r'\s+-\s+', ' ', text)
+    
+    # Remove espaços duplos
+    text = re.sub(r'\s+', ' ', text)
+    
     return text.strip()

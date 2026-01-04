@@ -40,8 +40,8 @@ def parse_filename(filename: str, message_text: str = ""):
                 season = 1
                 
                 raw_name = part_name.strip()
-                # Season no nome (Titulo 2)
-                season_match = re.search(r'\s(\d{1,2})$', raw_name)
+                # Season no nome (Titulo 2, Titulo Part 2)
+                season_match = re.search(r'\s(?:Part|Season|S|Vol)?\s*(\d{1,2})$', raw_name, re.IGNORECASE)
                 if season_match:
                     season = int(season_match.group(1))
                     raw_name = raw_name[:season_match.start()]
@@ -51,14 +51,19 @@ def parse_filename(filename: str, message_text: str = ""):
                 return {"type": "serie", "name": name, "season": season, "episode": f"S{season:02d}E{episode:03d}"}
 
         # 3. Fallback: EP xx
-        ep_match = re.search(r'\b(?:EP|EPISODIO|EPISODE)[.\- ]*(\d{1,4})', text_to_analyze, re.IGNORECASE)
+        ep_match = re.search(r'\b(?:EP|EPISODIO|EPISÓDIO|EPISODE)[.\- ]*(\d{1,4})', text_to_analyze, re.IGNORECASE)
         if ep_match:
              episode = int(ep_match.group(1))
              season = 1
              raw_title = text_to_analyze[:ep_match.start()]
+             
+             # Se vazio, tenta pegar DEPOIS (Ex: EP 01 - Nome da Serie)
+             if not raw_title.strip():
+                 raw_title = text_to_analyze[ep_match.end():]
+
              clean = clean_release_name(raw_title)
              
-             season_match = re.search(r'\s(\d{1,2})$', clean)
+             season_match = re.search(r'\s(?:Part|Season|S|Vol)?\s*(\d{1,2})$', clean, re.IGNORECASE)
              if season_match:
                  season = int(season_match.group(1))
                  clean = clean[:season_match.start()].strip()
@@ -83,17 +88,34 @@ def parse_filename(filename: str, message_text: str = ""):
 
     # --- Lógica de Decisão ---
     res_msg = _analyze(message_text)
+    res_file = _analyze(filename)
     
-    msg_is_bad = (
-        res_msg['type'] == 'unknown' or 
-        len(res_msg['name']) < 3 or 
-        res_msg['name'].isdigit()
-    )
+    def is_bad(res):
+        return (
+            not res['name'] or
+            len(res['name']) < 3 or 
+            res['name'].isdigit() or
+            "Desconhecido" in res['name'] or
+            "Desconhecida" in res['name'] or
+            "Temporada" in res['name'] or
+            "Season" in res['name'] or
+            '\n' in res['name']
+        )
 
-    if not msg_is_bad:
-        logger.info(f"Usando info da Legenda: {res_msg}")
+    # 1. Se a legenda identificou algo concreto (Filme/Série) e o nome é bom, use ela.
+    if res_msg['type'] != 'unknown' and not is_bad(res_msg):
+        logger.info(f"Legenda Identificada: {res_msg}")
+        return res_msg
+        
+    # 2. Se o arquivo identificou algo concreto (Filme/Série) e o nome é bom, use ele.
+    if res_file['type'] != 'unknown' and not is_bad(res_file):
+        logger.info(f"Arquivo Identificado: {res_file}")
+        return res_file
+
+    # 3. Fallback: Se ambos são unknown, prefira o que tem o nome mais "limpo".
+    if not is_bad(res_msg):
+        logger.info(f"Ambos unknown. Usando nome da legenda: {res_msg['name']}")
         return res_msg
     
-    res_file = _analyze(filename)
-    logger.info(f"Legenda descartada ({res_msg['name']}). Usando Arquivo: {res_file}")
+    logger.info(f"Usando fallback final (Arquivo): {res_file}")
     return res_file
