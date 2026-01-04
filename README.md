@@ -15,14 +15,36 @@ Este é um bot de automação para o Telegram desenvolvido com a biblioteca **Te
 - **Prevenção de Duplicatas:** Verifica se o arquivo já existe antes de iniciar o download.
 
 ## 🛠️ Pré-requisitos
+
+- Python 3.10 ou superior
+- Uma conta no Telegram e credenciais de API (veja abaixo como obter)
+
+## 🔑 Obtendo Credenciais da API (API_ID e API_HASH)
+
+Para que o bot funcione como um *Userbot*, você precisa registrar uma aplicação no Telegram:
+
+1. Acesse o site [my.telegram.org](https://my.telegram.org) e faça login com seu número de telefone.
+2. Clique em **API development tools**.
+3. No formulário "Create new application", preencha os campos:
+   - **App title:** Escolha qualquer nome (ex: `ZumbiBot`).
+   - **Short name:** Um nome curto (ex: `zbot`).
+   - **URL/Platform:** Pode deixar em branco ou colocar `Desktop`.
+4. Clique em **Create application**.
+5. Você verá seu **App api_id** e **App api_hash**. Copie esses valores para o seu arquivo `.env`.
+
+> 📺 **Dúvidas?** Assista a este [vídeo passo a passo no YouTube](https://www.youtube.com/watch?v=s7Ys5reuxHc) mostrando como realizar este procedimento.
+
+> **Nota:** Nunca compartilhe seu `api_hash` com ninguém. Ele é a chave de acesso à sua conta.
+
+## 📦 Instalação
 ...
     ```env
-    API_ID=seu_api_id
-    API_HASH=seu_api_hash
+    API_ID=1234567          # Seu App api_id
+    API_HASH=abcdef123456   # Seu App api_hash
     SESSION_NAME=ZumbiBot
     CHAT_ID=-100xxxxxxxxxx
     DOWNLOAD_DIR=D:/Downloads/Telegram
-    ENABLE_TMDB=True  # Ativa/Desativa consulta externa de metadados
+    ENABLE_TMDB=True        # Ativa/Desativa consulta externa de metadados
     ```
 
 ## 🚀 Como usar
