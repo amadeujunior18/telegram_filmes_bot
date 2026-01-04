@@ -36,16 +36,58 @@ Para que o bot funcione como um *Userbot*, você precisa registrar uma aplicaç�
 
 > **Nota:** Nunca compartilhe seu `api_hash` com ninguém. Ele é a chave de acesso à sua conta.
 
-## 📦 Instalação
-...
-    ```env
-    API_ID=1234567          # Seu App api_id
-    API_HASH=abcdef123456   # Seu App api_hash
-    SESSION_NAME=ZumbiBot
-    CHAT_ID=-100xxxxxxxxxx
-    DOWNLOAD_DIR=D:/Downloads/Telegram
-    ENABLE_TMDB=True        # Ativa/Desativa consulta externa de metadados
-    ```
+## 📦 Instalação e Configuração
+
+### 1. Clonar o projeto
+```bash
+git clone <url-do-repositorio>
+cd telegram_filmes_bot
+```
+
+### 2. Criar o Ambiente Virtual (venv)
+O uso do ambiente virtual é **altamente recomendado** para isolar as bibliotecas do bot das bibliotecas do seu sistema, evitando conflitos de versões.
+
+```bash
+# Cria o ambiente virtual
+python -m venv venv
+
+# Ativa o ambiente (Windows)
+.\venv\Scripts\activate
+
+# Ativa o ambiente (Linux/Mac)
+source venv/bin/activate
+```
+*Ao ativar, você verá `(venv)` aparecer no início da linha do seu terminal.*
+
+### 3. Instalar Dependências
+Com o ambiente virtual ativo, instale os pacotes necessários:
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configurar Variáveis de Ambiente (.env)
+O arquivo `.env` armazena suas chaves secretas e configurações de pastas. **Nunca compartilhe este arquivo.**
+
+Crie um arquivo chamado `.env` na raiz do projeto e preencha seguindo este modelo:
+
+```env
+# Credenciais do Telegram (obtidas em my.telegram.org)
+API_ID=1234567
+API_HASH=abcdef1234567890abcdef
+
+# Nome da sessão (pode deixar como ZumbiBot)
+SESSION_NAME=ZumbiBot
+
+# ID do Chat/Grupo que o bot deve monitorar
+# Dica: Use o script python tools/check_chats.py para descobrir o ID
+CHAT_ID=-100xxxxxxxxxx
+
+# Pasta onde os filmes e séries serão salvos
+DOWNLOAD_DIR=D:\Midia
+
+# Ativar consulta ao bot de metadados (True ou False)
+ENABLE_TMDB=True
+```
 
 ## 🚀 Como usar
 
