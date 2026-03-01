@@ -1,139 +1,79 @@
 # Telegram Filmes & Séries Downloader Bot
 
-Este é um bot de automação para o Telegram desenvolvido com a biblioteca **Telethon**. Ele monitora um chat específico, identifica arquivos de mídia (filmes e séries) e os organiza automaticamente em pastas estruturadas no seu sistema de arquivos.
+Este é um bot de automação de alta performance para o Telegram desenvolvido com a biblioteca **Telethon**. Ele atua como um *Userbot* para monitorar chats, identificar arquivos de mídia e organizá-los automaticamente com suporte a **download sequencial** e **cache em SSD**.
 
 ## 🚀 Funcionalidades
 
-- **Monitoramento em tempo real:** Baixa automaticamente novos vídeos ou documentos postados no chat configurado.
-- **Inteligência Artificial de Metadados (TMDb):** Integração com bot externo para validar nomes oficiais, anos de lançamento, gêneros e sinopses.
+- **Fila de Download Sequencial (SQLite):** Gerencia múltiplos pedidos simultâneos, baixando um arquivo por vez para preservar a vida útil do HDD e evitar fragmentação.
+- **Engine Turbo (SSD-to-HDD Staging):** Realiza o download inicial no SSD (maior IOPS) e move para o HDD final apenas após a conclusão, garantindo velocidade máxima da internet.
+- **Métricas em Tempo Real:** Comando `/fila` que exibe porcentagem, velocidade instantânea (KB/s) e tempo restante (ETA).
+- **Inteligência de Metadados (TMDb):** Integração híbrida para validar nomes oficiais, anos, gêneros e sinopses via bot externo.
 - **Organização Automática:**
-  - **Filmes:** Nome oficial e ano, ex: `Filmes/O Poderoso Chefão (1972)/...`
-  - **Séries:** Nome limpo e temporadas, ex: `Series/Breaking Bad/Season 01/...`
-- **Geração de info.txt:** Cria automaticamente um arquivo de texto com a sinopse e detalhes técnicos na pasta do download.
-- **Feedback Visual:** Envia mensagens de progresso no chat, informando etapas da busca no TMDb, porcentagem de download e velocidade.
-- **Logs Detalhados:** Sistema de logs com rotação diária para monitoramento.
-- **Prevenção de Duplicatas:** Verifica se o arquivo já existe antes de iniciar o download.
+  - **Filmes:** Estrutura `Filmes/Nome (Ano)/...`
+  - **Séries:** Estrutura `Series/Nome/Season XX/...`
+- **Geração de info.txt:** Metadados ricos salvos junto ao arquivo para indexação em Plex/Jellyfin.
+
+## ⚡ Engine de Download (SSD Staging)
+
+O sistema foi projetado para maximizar conexões de alta velocidade (até 1Gbps+):
+1. **Parallel Workers:** Utiliza 10 conexões simultâneas por arquivo.
+2. **Memory Buffering:** Buffers de 16MB em RAM reduzem escritas desnecessárias no disco.
+3. **Linear Move:** O arquivo é movido de forma atômica do SSD para o HDD, garantindo que os dados sejam gravados de forma contígua no disco mecânico.
 
 ## 🛠️ Pré-requisitos
 
 - Python 3.10 ou superior
-- Uma conta no Telegram e credenciais de API (veja abaixo como obter)
+- SSD para cache temporário (recomendado NVMe para performance máxima)
+- HDD Externo ou Interno para armazenamento final
 
-## 🔑 Obtendo Credenciais da API (API_ID e API_HASH)
+## 🔑 Obtendo Credenciais da API
 
-Para que o bot funcione como um *Userbot*, você precisa registrar uma aplicação no Telegram:
+1. Acesse [my.telegram.org](https://my.telegram.org).
+2. Vá em **API development tools**.
+3. Crie uma aplicação para obter seu **API_ID** e **API_HASH**.
 
-1. Acesse o site [my.telegram.org](https://my.telegram.org) e faça login com seu número de telefone.
-2. Clique em **API development tools**.
-3. No formulário "Create new application", preencha os campos:
-   - **App title:** Escolha qualquer nome (ex: `ZumbiBot`).
-   - **Short name:** Um nome curto (ex: `zbot`).
-   - **URL/Platform:** Pode deixar em branco ou colocar `Desktop`.
-4. Clique em **Create application**.
-5. Você verá seu **App api_id** e **App api_hash**. Copie esses valores para o seu arquivo `.env`.
+## 📦 Instalação
 
-> 📺 **Dúvidas?** Assista a este [vídeo passo a passo no YouTube](https://www.youtube.com/watch?v=s7Ys5reuxHc) mostrando como realizar este procedimento.
-
-> **Nota:** Nunca compartilhe seu `api_hash` com ninguém. Ele é a chave de acesso à sua conta.
-
-## 📦 Instalação e Configuração
-
-### 1. Clonar o projeto
 ```bash
+# 1. Clone e entre na pasta
 git clone <url-do-repositorio>
 cd telegram_filmes_bot
-```
 
-### 2. Criar o Ambiente Virtual (venv)
-O uso do ambiente virtual é **altamente recomendado** para isolar as bibliotecas do bot das bibliotecas do seu sistema, evitando conflitos de versões.
-
-```bash
-# Cria o ambiente virtual
+# 2. Configure o ambiente
 python -m venv venv
-
-# Ativa o ambiente (Windows)
-.\venv\Scripts\activate
-
-# Ativa o ambiente (Linux/Mac)
-source venv/bin/activate
-```
-*Ao ativar, você verá `(venv)` aparecer no início da linha do seu terminal.*
-
-### 3. Instalar Dependências
-Com o ambiente virtual ativo, instale os pacotes necessários:
-```bash
+.\venv\Scripts\activate  # Windows
 pip install -r requirements.txt
+
+# 3. Configure o .env (use o .env-example como base)
+cp .env-example .env
 ```
 
-### 4. Configurar Variáveis de Ambiente (.env)
-O arquivo `.env` armazena suas chaves secretas e configurações de pastas. **Nunca compartilhe este arquivo.**
+## 🎮 Comandos Disponíveis
 
-Crie um arquivo chamado `.env` na raiz do projeto e preencha seguindo este modelo:
+- `/fila`: Mostra o status do download atual (progresso, velocidade, tempo) e a lista de arquivos aguardando na fila.
+- **Respostas de Texto:** Responda a uma mídia com "Filme" ou "Série" para forçar a identificação manual caso o bot não identifique automaticamente.
 
-```env
-# Credenciais do Telegram (obtidas em my.telegram.org)
-API_ID=1234567
-API_HASH=abcdef1234567890abcdef
-
-# Nome da sessão (pode deixar como ZumbiBot)
-SESSION_NAME=ZumbiBot
-
-# ID do Chat/Grupo que o bot deve monitorar
-# Dica: Use o script python tools/check_chats.py para descobrir o ID
-CHAT_ID=-100xxxxxxxxxx
-
-# Pasta onde os filmes e séries serão salvos
-DOWNLOAD_DIR=D:\Midia
-
-# Ativar consulta ao bot de metadados (True ou False)
-ENABLE_TMDB=True
-```
-
-## 🚀 Como usar
-
-Para iniciar o bot, basta executar:
-
-```bash
-python bot.py
-```
-
-Na primeira execução, o Telegram solicitará seu número de telefone e o código de autenticação para criar a sessão (`.session`).
-
-## 📁 Estrutura de Pastas de Destino
-
-O bot organiza os downloads da seguinte forma:
+## 📁 Estrutura do Projeto
 
 ```text
-Downloads/
-├── Filmes/
-│   └── Nome do Filme (Ano)/
-│       └── arquivo_do_filme.mp4
-└── Series/
-    └── Nome da Série/
-        └── Season 01/
-            └── Nome da Série - S01E01.mp4
+├── bot.py                # Ponto de entrada e loop principal
+├── queue.db              # Banco SQLite da fila (gerado automaticamente)
+├── services/
+│   ├── downloader.py     # Lógica de download paralelo e SSD staging
+│   ├── queue_manager.py  # Gestão da fila no banco de dados
+│   └── queue_worker.py   # Processo de background que consome a fila
+├── handlers/
+│   └── messages.py       # Comandos e recepção de mídias
+└── config/               # Configurações de sessão e variáveis
 ```
 
-## 📝 Logs
+## 🧪 Testes
 
-Os logs são salvos na pasta `/log` e são rotacionados diariamente, mantendo um histórico de até 30 dias.
-
-## 🧪 Testes e Desenvolvimento
-
-O projeto conta com uma suíte de testes unitários para garantir que a lógica de detecção de nomes (Parser) continue funcionando corretamente com diferentes formatos de arquivos e legendas.
-
-Para executar os testes:
+Valide a lógica de detecção antes de rodar em produção:
 ```bash
 python tests/test_parser.py
 ```
 
-Isso validará casos críticos como:
-- Animes com nome simples ou temporada no título.
-- Séries padrão (`SxxExx`).
-- Filmes com ano no nome.
-- Fallback inteligente quando a legenda falha.
-- Suporte a caracteres acentuados (ex: "Episódio").
-
 ## ⚖️ Licença
 
-Este projeto é apenas para fins educacionais. Respeite as leis de direitos autorais da sua região.
+Este projeto é para fins educacionais. Respeite as leis de direitos autorais.
