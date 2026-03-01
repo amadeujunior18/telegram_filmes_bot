@@ -5,7 +5,7 @@ import asyncio
 import io
 import shutil
 from telethon.tl.types import DocumentAttributeFilename
-from config.settings import DOWNLOAD_DIR
+from config.settings import DOWNLOAD_DIR, WORKERS
 from utils.text_tools import sanitize_filename, format_time
 
 logger = logging.getLogger("ZumbiBot")
@@ -18,7 +18,6 @@ async def fast_download(client, msg, file, target_path, status_msg, progress_cal
     Realiza o download paralelo (FastTelethon style).
     """
     # Configurações do Download Paralelo
-    WORKERS = 10 
     CHUNK_SIZE = 1024 * 1024 * 16 
     
     file_size = file.size
