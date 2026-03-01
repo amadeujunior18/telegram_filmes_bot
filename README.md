@@ -14,7 +14,7 @@ Este é um bot de automação de alta performance para o Telegram desenvolvido c
 ## ⚡ Engine de Download (SSD Staging)
 
 O sistema foi projetado para maximizar conexões de alta velocidade:
-1. **Parallel Workers:** Utiliza 10 conexões simultâneas por arquivo.
+1. **Parallel Workers:** Utiliza conexões simultâneas por arquivo (configurável via `.env`).
 2. **Memory Buffering:** Buffers de 16MB em RAM reduzem escritas desnecessárias no disco.
 3. **Linear Move:** O arquivo é movido de forma atômica do SSD para o HDD, garantindo gravação contígua no disco mecânico.
 
@@ -71,6 +71,9 @@ DOWNLOAD_DIR=D:\Midia
 
 # Ativar consulta ao bot de metadados (True ou False)
 ENABLE_TMDB=True
+
+# Número de conexões paralelas por download (Recomendado: 4 a 10)
+WORKERS=10
 ```
 
 ## 📁 Estrutura de Pastas de Destino (Mídia)
