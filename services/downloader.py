@@ -10,12 +10,15 @@ from utils.text_tools import sanitize_filename, format_time
 
 logger = logging.getLogger("ZumbiBot")
 
+# Armazena o progresso em tempo real para o comando /fila
+current_download_progress = {}
+
 async def fast_download(client, msg, file, target_path, status_msg, progress_callback=None):
     """
     Realiza o download paralelo (FastTelethon style).
     """
     # Configurações do Download Paralelo
-    WORKERS = 4 
+    WORKERS = 10 
     CHUNK_SIZE = 1024 * 1024 * 16 
     
     file_size = file.size
@@ -136,18 +139,24 @@ async def perform_download(status_msg, original_msg, info):
     async def progress(current, total):
         nonlocal last_update
         now = time.time()
-        if now - last_update < 3: return 
-        last_update = now
         
         percent = int(current * 100 / total)
         elapsed = now - start_time
-        speed = current / elapsed / 1024 if elapsed > 0 else 0
-        etr = format_time((total - current) / (speed * 1024)) if speed > 0 else "--:--"
+        speed_kb = current / elapsed / 1024 if elapsed > 0 else 0
+        etr = format_time((total - current) / (speed_kb * 1024)) if speed_kb > 0 else "--:--"
+        
+        # Atualiza o progresso global para o comando /fila
+        current_download_progress['percent'] = percent
+        current_download_progress['speed'] = speed_kb
+        current_download_progress['etr'] = etr
+
+        if now - last_update < 3: return 
+        last_update = now
         
         try:
             await status_msg.edit(
                 f"⬇️ Baixando `{final_name}`\n"
-                f"🚀 SSD Turbo: {percent}% | {speed:.0f} KB/s | ⏳ {etr}"
+                f"🚀 SSD Turbo: {percent}% | {speed_kb:.0f} KB/s | ⏳ {etr}"
             )
         except: pass
 
@@ -169,19 +178,6 @@ async def perform_download(status_msg, original_msg, info):
         await status_msg.edit(f"✅ Concluído: `{final_name}`")
         logger.info(f"Download finalizado e movido para: {final_file_path}")
         
-        # 3. Cria arquivo de informações (Metadata Rica)
-        if info.get('synopsis') or info.get('genres'):
-            info_txt_path = os.path.join(target_dir, "info.txt")
-            if not os.path.exists(info_txt_path):
-                with open(info_txt_path, "w", encoding="utf-8") as f:
-                    f.write(f"Título: {info['name']}\n")
-                    if info.get('year'): f.write(f"Ano: {info['year']}\n")
-                    if info.get('genres'): f.write(f"Gêneros: {info['genres']}\n")
-                    if info.get('synopsis'):
-                        f.write("\nSinopse:\n")
-                        f.write(info['synopsis'])
-                logger.info(f"Arquivo info.txt criado em: {target_dir}")
-        
     except Exception as e:
         logger.error(f"Erro no download: {e}", exc_info=True)
         # Limpa o temporário se der erro
@@ -189,3 +185,6 @@ async def perform_download(status_msg, original_msg, info):
             try: os.remove(temp_file_path)
             except: pass
         await status_msg.edit(f"❌ Erro: {e}")
+    finally:
+        # Limpa o progresso global ao finalizar (sucesso ou erro)
+        current_download_progress.clear()

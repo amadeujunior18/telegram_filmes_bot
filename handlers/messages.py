@@ -5,13 +5,69 @@ from config.session import client
 from config.settings import CHAT_ID, ENABLE_TMDB
 from services.parser import parse_filename
 from services.metadata_fetcher import fetch_metadata
-from services.downloader import perform_download
+from services.downloader import perform_download, current_download_progress
+from services.queue_manager import add_to_queue, get_full_queue
+
 
 logger = logging.getLogger("ZumbiBot")
 
 def register_handlers():
     """Registra os eventos no cliente."""
     
+    @client.on(events.NewMessage(pattern='/fila'))
+    async def queue_status_handler(event):
+        """Mostra o estado atual da fila de downloads."""
+        if event.chat_id != CHAT_ID:
+            return
+
+        downloading, pending = get_full_queue()
+
+        def format_item_name(info):
+            name = info.get('name', 'Desconhecido')
+            # Se for série e tiver episódio, adiciona SxxExx
+            if info.get('type') == 'serie' and info.get('episode'):
+                # Verifica se o nome já contém SxxExx (evita duplicação)
+                if info['episode'] not in name:
+                    return f"{name} {info['episode']}"
+            # Se for filme e tiver ano, adiciona (Ano) se não estiver no nome
+            elif info.get('type') == 'movie' and info.get('year'):
+                year_str = f"({info['year']})"
+                if year_str not in name:
+                    return f"{name} {year_str}"
+            return name
+
+        response = "📊 **Estado Atual da Fila**\n\n"
+
+        if downloading:
+            response += "⚡ **Sendo baixado agora:**\n"
+            for item in downloading:
+                display_name = format_item_name(item['info'])
+                
+                # Detalhes do progresso em tempo real
+                if current_download_progress:
+                    p = current_download_progress.get('percent', 0)
+                    s = current_download_progress.get('speed', 0)
+                    e = current_download_progress.get('etr', '--:--')
+                    response += f"• `{display_name}`\n  └ ⏩ **{p}%** | 🚀 {s:.0f} KB/s | ⏳ {e} (ID: {item['id']})\n"
+                else:
+                    response += f"• `{display_name}` (ID: {item['id']})\n"
+        else:
+            response += "💤 **Nenhum download em andamento.**\n"
+
+        response += "\n⏳ **Próximos na fila (pendentes):**\n"
+        if pending:
+            for item in pending:
+                display_name = format_item_name(item['info'])
+                response += f"• `{display_name}` (ID: {item['id']})\n"
+
+            if len(pending) >= 10:
+                response += "\n_...e outros itens aguardando._"
+        else:
+            response += "_Fila vazia._"
+
+        await event.reply(response)
+
+
     @client.on(events.NewMessage())
     async def file_handler(event):
         # Filtro de Chat
@@ -85,15 +141,15 @@ def register_handlers():
         logger.info(f"Resultado Final da Detecção: {info}")
         logger.info(f"---------------------------")
 
-        # 6. Decisão
+        # 6. Decisão (ADICIONAR À FILA)
         if info["type"] != "unknown":
-            msg_confirm = f"🚀 Identificado como {info['type']}!\nIniciando download..."
-            if not status_msg:
-                status_msg = await event.reply(msg_confirm)
+            queue_id = add_to_queue(event.chat_id, event.id, info)
+            msg_queued = f"📝 **Adicionado à Fila de Download!**\n📌 Nome: `{info['name']}`\n🔢 Posição/ID: `{queue_id}`\n\n_O download começará automaticamente assim que a fila estiver livre._"
+            
+            if status_msg:
+                await status_msg.edit(msg_queued)
             else:
-                await status_msg.edit(msg_confirm)
-                
-            await perform_download(status_msg, event.message, info)
+                await event.reply(msg_queued)
         else:
             msg_fail = (
                 f"**Arquivo Detectado:** `{file_name}`\n"
@@ -134,5 +190,6 @@ def register_handlers():
             if 'season' not in info: info.update({'season': 1, 'episode': 'Extra'})
         else: info['type'] = 'unknown'
 
-        status_msg = await event.reply(f"👍 Entendido! Baixando como {info['type']}...")
-        await perform_download(status_msg, original_file_msg, info)
+        queue_id = add_to_queue(event.chat_id, original_file_msg.id, info)
+        await event.reply(f"👍 Entendido! Adicionado à fila como {info['type']} (ID: {queue_id}).")
+
