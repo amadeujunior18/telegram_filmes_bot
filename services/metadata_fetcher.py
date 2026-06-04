@@ -50,15 +50,24 @@ async def fetch_metadata_tmdb(query_name: str, media_type: str, api_key: str,
                 logger.warning(f"⚠️ TMDb: nenhum resultado para '{query_clean}'")
                 return None
 
-            # Valida o match com fuzzy (limiar mais baixo que o bot pois a API já filtra)
+            # Valida o match com fuzzy comparando contra título localizado E título original.
+            # Necessário porque a busca em pt-BR retorna title="Cara de Um, Focinho de Outro"
+            # enquanto a query pode ser em inglês ("Hoppers 2026") — o original_title "Hoppers"
+            # é o campo correto para comparar nesse caso.
             title_field = "name" if search_type == "tv" else "title"
+            original_field = "original_name" if search_type == "tv" else "original_title"
             found_title = result.get(title_field, "")
-            score = fuzz.token_sort_ratio(query_clean.lower(), found_title.lower())
+            original_title = result.get(original_field, "")
+
+            score = max(
+                fuzz.token_sort_ratio(query_clean.lower(), found_title.lower()),
+                fuzz.token_sort_ratio(query_clean.lower(), original_title.lower()),
+            )
             if score < 60:
-                logger.warning(f"⚠️ TMDb: match fraco ({score}%) entre '{query_clean}' e '{found_title}'")
+                logger.warning(f"⚠️ TMDb: match fraco ({score}%) entre '{query_clean}' e '{found_title}' / '{original_title}'")
                 return None
 
-            logger.info(f"✅ TMDb: encontrado '{found_title}' (score {score}%)")
+            logger.info(f"✅ TMDb: encontrado '{found_title}' (original: '{original_title}', score {score}%)")
 
             # 2. Busca detalhes (gêneros em PT-BR)
             tmdb_id = result["id"]
