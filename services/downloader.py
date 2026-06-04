@@ -4,6 +4,7 @@ import logging
 import asyncio
 import io
 import shutil
+import aiofiles
 from telethon.tl.types import DocumentAttributeFilename
 from config.settings import DOWNLOAD_DIR, WORKERS
 from utils.text_tools import sanitize_filename, format_time
@@ -12,6 +13,33 @@ logger = logging.getLogger("ZumbiBot")
 
 # Progresso em tempo real — acessado pelo handler /fila
 current_download_progress = {}
+
+
+async def _validate_file(path: str, expected_size: int):
+    """Valida integridade do arquivo em duas camadas: tamanho e ffprobe."""
+    actual_size = os.path.getsize(path)
+    if actual_size != expected_size:
+        raise ValueError(
+            f"Arquivo corrompido: esperado {expected_size} bytes, "
+            f"obtido {actual_size} bytes ({actual_size / expected_size * 100:.1f}%)"
+        )
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, stderr = await proc.communicate()
+        if proc.returncode != 0 or stderr.strip():
+            raise ValueError(f"ffprobe detectou corrupção: {stderr.decode().strip()}")
+        logger.info(f"✅ ffprobe: arquivo íntegro — {os.path.basename(path)}")
+    except FileNotFoundError:
+        logger.warning("⚠️ ffprobe não encontrado no PATH — validação de container ignorada.")
+
 
 async def fast_download(client, msg, file, target_path, status_msg, progress_callback=None):
     """Realiza o download paralelo com workers assíncronos."""
@@ -51,13 +79,12 @@ async def fast_download(client, msg, file, target_path, status_msg, progress_cal
                     chunk_buffer = io.BytesIO()
                     bytes_in_chunk = 0
 
-                    async for chunk in client.iter_download(file, offset=offset, limit=None, chunk_size=None, request_size=512*1024):
+                    async for chunk in client.iter_download(file, offset=offset, limit=limit, chunk_size=None, request_size=1024*1024):
                         chunk_buffer.write(chunk)
                         chunk_len = len(chunk)
                         bytes_in_chunk += chunk_len
+                        downloaded_bytes += chunk_len
 
-                        async with write_lock:
-                            downloaded_bytes += chunk_len
                         if progress_callback:
                             await progress_callback(downloaded_bytes, file_size)
 
@@ -65,9 +92,9 @@ async def fast_download(client, msg, file, target_path, status_msg, progress_cal
                             break
 
                     async with write_lock:
-                        with open(target_path, 'r+b') as f:
-                            f.seek(offset)
-                            f.write(chunk_buffer.getvalue())
+                        async with aiofiles.open(target_path, 'r+b') as f:
+                            await f.seek(offset)
+                            await f.write(chunk_buffer.getvalue())
 
                     chunk_buffer.close()
                     break  # chunk concluído com sucesso
@@ -174,6 +201,8 @@ async def perform_download(status_msg, original_msg, info):
 
     await status_msg.edit(f"⬇️ Baixando no SSD: `{final_name}`\n📂 Temp: `{temp_dir}`")
 
+    file_size = original_msg.media.document.size
+
     start_time = time.time()
     last_update = 0
 
@@ -215,6 +244,9 @@ async def perform_download(status_msg, original_msg, info):
             status_msg,
             progress_callback=progress
         )
+
+        await status_msg.edit(f"🔍 Validando arquivo...")
+        await _validate_file(temp_file_path, file_size)
 
         await status_msg.edit(f"📦 Movendo para o HDD...\nDe: SSD\nPara: `{target_dir}`")
         shutil.move(temp_file_path, final_file_path)
