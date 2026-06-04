@@ -2,9 +2,9 @@ import logging
 import re
 from telethon import events
 from config.session import client
-from config.settings import CHAT_ID, ENABLE_TMDB
+from config.settings import CHAT_ID, ENABLE_TMDB, TMDB_API_KEY
 from services.parser import parse_filename
-from services.metadata_fetcher import fetch_metadata
+from services.metadata_fetcher import fetch_metadata, fetch_metadata_tmdb
 from services.downloader import perform_download, current_download_progress
 from services.queue_manager import add_to_queue, get_full_queue
 
@@ -127,7 +127,10 @@ def register_handlers():
             # ou como filme se o parser estiver em dúvida.
             search_type = info['type'] if info['type'] != 'unknown' else 'movie'
             
-            meta = await fetch_metadata(client, search_name, search_type, status_msg=status_msg)
+            if TMDB_API_KEY:
+                meta = await fetch_metadata_tmdb(search_name, search_type, TMDB_API_KEY, status_msg=status_msg)
+            else:
+                meta = await fetch_metadata(client, search_name, search_type, status_msg=status_msg)
             if meta:
                 info['name'] = meta['final_name']
                 if meta.get('year'): info['year'] = meta['year']

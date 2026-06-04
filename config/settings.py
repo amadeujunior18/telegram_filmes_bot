@@ -21,6 +21,7 @@ SESSION_NAME = os.getenv("SESSION_NAME", "ZumbiBot")
 CHAT_ID = int(os.getenv("CHAT_ID"))
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR")
 ENABLE_TMDB = os.getenv("ENABLE_TMDB", "True").lower() == "true"
+TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
 WORKERS = int(os.getenv("WORKERS", "4"))
 
 # Cria diretório de downloads se não existir

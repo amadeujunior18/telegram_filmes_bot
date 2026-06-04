@@ -83,6 +83,29 @@ async def fast_download(client, msg, file, target_path, status_msg, progress_cal
 
     return target_path
 
+def _write_info_txt(target_dir: str, info: dict):
+    """Cria info.txt com metadados junto ao arquivo baixado."""
+    if not info.get('synopsis') and not info.get('genres'):
+        return
+    try:
+        lines = [f"Nome: {info.get('name', '')}"]
+        type_label = {"movie": "FILME", "serie": "SÉRIE"}.get(info.get('type', ''), "OUTRO")
+        lines.append(f"Tipo: {type_label}")
+        if info.get('year'):
+            lines.append(f"Ano: {info['year']}")
+        if info.get('genres'):
+            lines.append(f"Gêneros: {info['genres']}")
+        if info.get('synopsis'):
+            lines.append(f"\nSinopse:\n{info['synopsis']}")
+        content = "\n".join(lines) + "\n"
+        info_path = os.path.join(target_dir, "info.txt")
+        with open(info_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        logger.info(f"📝 info.txt criado: {info_path}")
+    except Exception as e:
+        logger.warning(f"⚠️ Não foi possível criar info.txt: {e}")
+
+
 async def perform_download(status_msg, original_msg, info):
     """Wrapper principal que decide caminhos e chama o fast_download."""
 
@@ -165,6 +188,7 @@ async def perform_download(status_msg, original_msg, info):
         await status_msg.edit(f"📦 Movendo para o HDD...\nDe: SSD\nPara: `{target_dir}`")
         shutil.move(temp_file_path, final_file_path)
 
+        _write_info_txt(target_dir, info)
         await status_msg.edit(f"✅ Concluído: `{final_name}`")
         logger.info(f"Download finalizado e movido para: {final_file_path}")
 
