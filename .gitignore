@@ -160,6 +160,8 @@ dmypy.json
 
 # Fila de download (banco local gerado automaticamente)
 queue.db
+queue.db-shm
+queue.db-wal
 
 # pytype static type analyzer
 .pytype/
