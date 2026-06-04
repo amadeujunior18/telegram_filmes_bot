@@ -48,7 +48,8 @@ def register_handlers():
                 s = current_download_progress.get('speed', 0)
                 e = current_download_progress.get('etr', '--:--')
                 if p or s:
-                    response += f"• `{display_name}`\n  └ ⏩ **{p}%** | 🚀 {s:.0f} KB/s | ⏳ {e} (ID: {item['id']})\n"
+                    speed_str = f"{s / 1024:.1f} MB/s" if s >= 1024 else f"{s:.0f} KB/s"
+                    response += f"• `{display_name}`\n  └ ⏩ **{p}%** | 🚀 {speed_str} | ⏳ {e} (ID: {item['id']})\n"
                 else:
                     response += f"• `{display_name}` (ID: {item['id']})\n"
         else:

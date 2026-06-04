@@ -195,9 +195,13 @@ async def perform_download(status_msg, original_msg, info):
         last_update = now
 
         try:
+            if speed_kb >= 1024:
+                speed_str = f"{speed_kb / 1024:.1f} MB/s"
+            else:
+                speed_str = f"{speed_kb:.0f} KB/s"
             await status_msg.edit(
                 f"⬇️ Baixando `{final_name}`\n"
-                f"🚀 SSD Turbo: {percent}% | {speed_kb:.0f} KB/s | ⏳ {etr}"
+                f"🚀 SSD Turbo: {percent}% | {speed_str} | ⏳ {etr}"
             )
         except Exception:
             pass
