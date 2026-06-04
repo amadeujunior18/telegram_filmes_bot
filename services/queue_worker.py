@@ -1,10 +1,12 @@
 import asyncio
 import logging
 from config.session import client
+from config.settings import ENABLE_TMDB, TMDB_API_KEY
 from services.queue_manager import (
-    get_next_pending, update_status, increment_retries, get_retry_count
+    get_next_pending, update_status, increment_retries, get_retry_count, update_info
 )
 from services.downloader import perform_download
+from services.metadata_fetcher import fetch_metadata_tmdb
 
 logger = logging.getLogger("ZumbiBot")
 
@@ -25,6 +27,22 @@ async def download_worker():
         chat_id = task['chat_id']
         message_id = task['message_id']
         info = task['info']
+
+        # Enriquece via TMDb se o item entrou na fila sem consulta (ex: restart, falha anterior)
+        if (ENABLE_TMDB and TMDB_API_KEY and
+                info.get('type') in ('movie', 'unknown') and
+                not info.get('tmdb_id')):
+            search_type = 'movie' if info.get('type') != 'unknown' else 'movie'
+            meta = await fetch_metadata_tmdb(info['name'], search_type, TMDB_API_KEY)
+            if meta:
+                info['name'] = meta['final_name']
+                if meta.get('year'):     info['year']     = meta['year']
+                if meta.get('synopsis'): info['synopsis'] = meta['synopsis']
+                if meta.get('genres'):   info['genres']   = meta['genres']
+                if meta.get('tmdb_id'):  info['tmdb_id']  = meta['tmdb_id']
+                if info['type'] == 'unknown': info['type'] = meta['type']
+                update_info(queue_id, info)
+                logger.info(f"🔄 Info enriquecido no worker: {info['name']}")
 
         logger.info(f"⚡ Iniciando download da fila: {info['name']} (ID: {queue_id})")
         update_status(queue_id, 'downloading')

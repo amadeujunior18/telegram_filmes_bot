@@ -53,6 +53,14 @@ def update_status(queue_id, status):
     with _connect() as conn:
         conn.execute("UPDATE download_queue SET status = ? WHERE id = ?", (status, queue_id))
 
+def update_info(queue_id: int, info: dict):
+    """Persiste info enriquecido no banco para evitar re-consulta em retries."""
+    with _connect() as conn:
+        conn.execute(
+            "UPDATE download_queue SET info = ? WHERE id = ?",
+            (json.dumps(info), queue_id)
+        )
+
 def increment_retries(queue_id):
     with _connect() as conn:
         conn.execute("UPDATE download_queue SET retries = retries + 1 WHERE id = ?", (queue_id,))
