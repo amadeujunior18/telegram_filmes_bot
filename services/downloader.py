@@ -37,6 +37,8 @@ async def fast_download(client, msg, file, target_path, status_msg, progress_cal
 
     downloaded_bytes = 0
 
+    MAX_CHUNK_RETRIES = 3
+
     async def worker(worker_id):
         nonlocal downloaded_bytes
 
@@ -44,35 +46,44 @@ async def fast_download(client, msg, file, target_path, status_msg, progress_cal
             offset = await queue.get()
             limit = min(CHUNK_SIZE, file_size - offset)
 
-            try:
-                chunk_buffer = io.BytesIO()
-                bytes_in_chunk = 0
+            for attempt in range(MAX_CHUNK_RETRIES):
+                try:
+                    chunk_buffer = io.BytesIO()
+                    bytes_in_chunk = 0
 
-                async for chunk in client.iter_download(file, offset=offset, limit=None, chunk_size=None, request_size=512*1024):
-                    chunk_buffer.write(chunk)
-                    chunk_len = len(chunk)
-                    bytes_in_chunk += chunk_len
+                    async for chunk in client.iter_download(file, offset=offset, limit=None, chunk_size=None, request_size=512*1024):
+                        chunk_buffer.write(chunk)
+                        chunk_len = len(chunk)
+                        bytes_in_chunk += chunk_len
+
+                        async with write_lock:
+                            downloaded_bytes += chunk_len
+                        if progress_callback:
+                            await progress_callback(downloaded_bytes, file_size)
+
+                        if bytes_in_chunk >= limit:
+                            break
 
                     async with write_lock:
-                        downloaded_bytes += chunk_len
-                    if progress_callback:
-                        await progress_callback(downloaded_bytes, file_size)
+                        with open(target_path, 'r+b') as f:
+                            f.seek(offset)
+                            f.write(chunk_buffer.getvalue())
 
-                    if bytes_in_chunk >= limit:
-                        break
+                    chunk_buffer.close()
+                    break  # chunk concluído com sucesso
 
-                async with write_lock:
-                    with open(target_path, 'r+b') as f:
-                        f.seek(offset)
-                        f.write(chunk_buffer.getvalue())
+                except Exception as e:
+                    chunk_buffer.close()
+                    if attempt < MAX_CHUNK_RETRIES - 1:
+                        wait = 5 * (attempt + 1)
+                        logger.warning(f"⚠️ Worker {worker_id} timeout no offset {offset} (tentativa {attempt + 1}/{MAX_CHUNK_RETRIES}). Aguardando {wait}s...")
+                        await asyncio.sleep(wait)
+                    else:
+                        logger.error(f"❌ Worker {worker_id} falhou definitivamente no offset {offset}: {e}")
+                        queue.task_done()
+                        raise
 
-                chunk_buffer.close()
-
-            except Exception as e:
-                logger.error(f"Worker {worker_id} falhou no offset {offset}: {e}")
-                raise
-            finally:
-                queue.task_done()
+            queue.task_done()
 
     tasks = [asyncio.create_task(worker(i)) for i in range(WORKERS)]
     await queue.join()

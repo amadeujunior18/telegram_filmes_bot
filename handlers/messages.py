@@ -102,12 +102,10 @@ def register_handlers():
         # 4. Processamento Local (Rápido)
         info = parse_filename(file_name, event.message.message)
         
-        # 5. Refinamento Externo (IMDb Bot)
-        # Acionado se: habilitado no .env E (unknown OU filme sem ano)
-        needs_refinement = ENABLE_TMDB and (
-            info['type'] == 'unknown' or 
-            (info['type'] == 'movie' and not info.get('year'))
-        )
+        # 5. Refinamento Externo (TMDb)
+        # Acionado para filmes sempre (garante nome PT-BR mesmo quando arquivo tem nome em inglês)
+        # e para unknown. Séries não precisam pois S01E01 é mais confiável que o título.
+        needs_refinement = ENABLE_TMDB and info['type'] in ('movie', 'unknown')
         
         status_msg = None
         if needs_refinement:
