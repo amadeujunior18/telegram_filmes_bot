@@ -128,6 +128,12 @@ def register_handlers():
             
             if TMDB_API_KEY:
                 meta = await fetch_metadata_tmdb(search_name, search_type, TMDB_API_KEY, status_msg=status_msg)
+                # Fallback: se não encontrou pelo nome do arquivo, tenta a 1ª linha da legenda
+                if meta is None and raw_caption not in ("(Sem legenda)", ""):
+                    caption_first = raw_caption.split('\n')[0].strip()
+                    if len(caption_first) >= 3 and caption_first.lower() != search_name.lower():
+                        logger.info(f"🔄 Fallback TMDb: buscando pela legenda '{caption_first}'")
+                        meta = await fetch_metadata_tmdb(caption_first, search_type, TMDB_API_KEY, status_msg=status_msg)
             else:
                 meta = await fetch_metadata(client, search_name, search_type, status_msg=status_msg)
             if meta:

@@ -27,7 +27,13 @@ async def fetch_metadata_tmdb(query_name: str, media_type: str, api_key: str,
     if not query_name or len(query_name) < 3:
         return None
 
-    query_clean = re.sub(r'[^a-zA-Z0-9áéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ ]+', ' ', query_name)
+    # Extrai ano de "(YYYY)" antes de limpar — será passado como parâmetro separado
+    # para que o TMDb não trate "2026" como parte do título
+    year_match = re.search(r'\((\d{4})\)', query_name)
+    query_year = year_match.group(1) if year_match else None
+
+    query_clean = re.sub(r'\(\d{4}\)', '', query_name)
+    query_clean = re.sub(r'[^a-zA-Z0-9áéíóúâêîôûãõçÁÉÍÓÚÂÊÎÔÛÃÕÇ ]+', ' ', query_clean)
     query_clean = re.sub(r'\s+', ' ', query_clean).strip()
 
     search_type = "tv" if media_type == "serie" else "movie"
@@ -38,14 +44,14 @@ async def fetch_metadata_tmdb(query_name: str, media_type: str, api_key: str,
         except Exception:
             pass
 
-    logger.info(f"🌐 TMDb API: buscando '{query_clean}' como {search_type}")
+    logger.info(f"🌐 TMDb API: buscando '{query_clean}' como {search_type}" + (f" ({query_year})" if query_year else ""))
 
     try:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=timeout)) as session:
             # 1. Busca em PT-BR; se sem resultado, tenta EN
-            result = await _search(session, api_key, search_type, query_clean, "pt-BR")
+            result = await _search(session, api_key, search_type, query_clean, "pt-BR", year=query_year)
             if not result:
-                result = await _search(session, api_key, search_type, query_clean, "en-US")
+                result = await _search(session, api_key, search_type, query_clean, "en-US", year=query_year)
             if not result:
                 logger.warning(f"⚠️ TMDb: nenhum resultado para '{query_clean}'")
                 return None
@@ -116,10 +122,13 @@ async def fetch_metadata_tmdb(query_name: str, media_type: str, api_key: str,
 
 
 async def _search(session: aiohttp.ClientSession, api_key: str, search_type: str,
-                  query: str, language: str):
+                  query: str, language: str, year: str = None):
     """Busca no TMDb e retorna o primeiro resultado ou None."""
     url = f"{TMDB_BASE_URL}/search/{search_type}"
     params = {"api_key": api_key, "query": query, "language": language, "page": 1}
+    if year:
+        # TMDb usa parâmetros diferentes para filtrar por ano dependendo do tipo
+        params["first_air_date_year" if search_type == "tv" else "primary_release_year"] = year
     async with session.get(url, params=params) as resp:
         resp.raise_for_status()
         data = await resp.json()
