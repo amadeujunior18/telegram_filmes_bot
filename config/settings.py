@@ -50,5 +50,9 @@ console_handler = logging.StreamHandler()
 console_handler.setFormatter(log_formatter)
 logger.addHandler(console_handler)
 
+# Silencia warnings temporários do Telethon (ex: timeouts de chunk tratados pelo retry)
+# Erros graves (nível ERROR) ainda aparecem normalmente
+logging.getLogger('telethon').setLevel(logging.ERROR)
+
 def get_logger():
     return logger
