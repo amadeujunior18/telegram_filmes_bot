@@ -1,13 +1,11 @@
 import sys
 import os
 
-# Adiciona a raiz do projeto ao path para conseguir importar 'services'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from services.parser import parse_filename
 import logging
 
-# Silencia logs informativos para o teste ficar limpo
 logging.basicConfig(level=logging.ERROR)
 
 TEST_CASES = [
@@ -58,48 +56,69 @@ TEST_CASES = [
         "filename": "(Desconhecido)",
         "caption": "Pantera.Negra:Wakanda.Para.Sempre",
         "expected": {
-            "type": "unknown", 
+            "type": "unknown",
             "name": "Pantera Negra Wakanda Para Sempre"
         }
-    }
+    },
+    # --- Edge cases ---
+    {
+        "id": "Edge: Entrada vazia",
+        "filename": "",
+        "caption": "",
+        "expected": {"type": "unknown"}
+    },
+    {
+        "id": "Edge: Só números no filename",
+        "filename": "12345.mp4",
+        "caption": "",
+        "expected": {"type": "unknown"}
+    },
+    {
+        "id": "Edge: Legenda None tratada como string vazia",
+        "filename": "Naruto.S01E01.mp4",
+        "caption": None,
+        "expected": {"type": "serie", "season": 1, "episode": "S01E01"}
+    },
+    {
+        "id": "Edge: Caracteres especiais no nome",
+        "filename": "The.Movie.<2024>.1080p.mp4",
+        "caption": "",
+        "expected": {"type": "movie", "year": "2024"}
+    },
 ]
 
 def run_tests():
     print(f"--- Executando Testes de Unidade ({len(TEST_CASES)} casos) ---\n")
     failed = 0
-    
+
     for case in TEST_CASES:
-        res = parse_filename(case['filename'], case['caption'])
+        caption = case['caption'] if case['caption'] is not None else ""
+        res = parse_filename(case['filename'], caption)
         errors = []
-        
+
         for key, expected_val in case['expected'].items():
             actual_val = res.get(key)
             if str(actual_val).lower() != str(expected_val).lower():
                 errors.append(f"{key}: esperado '{expected_val}', obtido '{actual_val}'")
-        
-        # Simulação Visual do Caminho (Windows Style)
+
         simulated_path = "???"
         if res.get('type') == 'serie':
-            # Ex: Series\Nome\Season 01\Nome - S01E01.mp4
             filename_final = f"{res['name']} - {res['episode']}.mp4"
             simulated_path = os.path.join("Series", res['name'], f"Season {res['season']:02d}", filename_final)
         elif res.get('type') == 'movie':
-            # Ex: Filmes\Nome (Ano)\ArquivoOriginal.mp4
             simulated_path = os.path.join("Filmes", res['name'], case['filename'])
         else:
-            # Ex: Outros\Nome\Nome.mp4
-            ext = ".mp4" # Simulação
-            simulated_filename = f"{res['name']}{ext}"
-            simulated_path = os.path.join("Outros", res['name'], simulated_filename)
+            simulated_path = os.path.join("Outros", res.get('name', '???'), f"{res.get('name', '???')}.mp4")
 
         if errors:
             print(f"❌ {case['id']} FALHOU")
-            for err in errors: print(f"   -> {err}")
+            for err in errors:
+                print(f"   -> {err}")
             failed += 1
         else:
             print(f"✅ {case['id']} OK")
             print(f"   📂 {simulated_path}")
-            
+
     print(f"\nResultado: {len(TEST_CASES)-failed}/{len(TEST_CASES)} passaram.")
     return failed == 0
 

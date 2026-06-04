@@ -1,8 +1,8 @@
 telethon==1.41.2
 python-dotenv==1.1.1
-cryptg
+cryptg==0.5.2
 hachoir
 aiohttp
 aiofiles
 FastTelethonhelper
-fuzzywuzzy[speedup]
+rapidfuzz

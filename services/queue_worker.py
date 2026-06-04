@@ -1,20 +1,24 @@
 import asyncio
 import logging
 from config.session import client
-from services.queue_manager import get_next_pending, update_status, get_queue_stats
+from services.queue_manager import (
+    get_next_pending, update_status, increment_retries, get_retry_count
+)
 from services.downloader import perform_download
 
 logger = logging.getLogger("ZumbiBot")
 
+MAX_RETRIES = 3
+
 async def download_worker():
     """Loop infinito que consome a fila de download uma por vez."""
     logger.info("🚀 Worker de Download Iniciado (Modo Sequencial)")
-    
+
     while True:
         task = get_next_pending()
-        
+
         if not task:
-            await asyncio.sleep(5)  # Espera 5 segundos se não houver tarefas
+            await asyncio.sleep(5)
             continue
 
         queue_id = task['id']
@@ -26,31 +30,51 @@ async def download_worker():
         update_status(queue_id, 'downloading')
 
         try:
-            # 1. Recupera a mensagem original (para o Telethon baixar)
             msg = await client.get_messages(chat_id, ids=message_id)
             if not msg or not msg.media:
                 logger.error(f"❌ Mensagem {message_id} não encontrada ou sem mídia.")
-                update_status(queue_id, 'failed')
+                await _handle_failure(queue_id, chat_id, info, "Arquivo não encontrado ou já deletado.")
                 continue
 
-            # 2. Cria mensagem de status (ou usa a original se existisse, mas aqui criamos uma nova)
             status_msg = await client.send_message(
-                chat_id, 
+                chat_id,
                 f"📂 Iniciando download sequencial da fila...\n"
                 f"📌 `{info['name']}`\n"
                 f"🔢 Fila ID: {queue_id}",
                 reply_to=message_id
             )
 
-            # 3. Chama o perform_download existente
             await perform_download(status_msg, msg, info)
-            
+
             update_status(queue_id, 'completed')
             logger.info(f"✅ Download {queue_id} concluído com sucesso.")
 
         except Exception as e:
-            logger.error(f"❌ Erro fatal no worker (Fila ID: {queue_id}): {e}", exc_info=True)
-            update_status(queue_id, 'failed')
-        
-        # Pequeno intervalo entre downloads para aliviar o disco/conduzir logs
+            logger.error(f"❌ Erro no worker (Fila ID: {queue_id}): {e}", exc_info=True)
+            await _handle_failure(queue_id, chat_id, info, str(e))
+
         await asyncio.sleep(2)
+
+async def _handle_failure(queue_id, chat_id, info, reason):
+    """Gerencia retries e notifica o usuário em caso de falha definitiva."""
+    retries = get_retry_count(queue_id)
+
+    if retries < MAX_RETRIES:
+        increment_retries(queue_id)
+        wait = 30 * (retries + 1)
+        logger.warning(f"⚠️ Tentativa {retries + 1}/{MAX_RETRIES} falhou. Reagendando em {wait}s. (ID: {queue_id})")
+        await asyncio.sleep(wait)
+        update_status(queue_id, 'pending')
+    else:
+        update_status(queue_id, 'failed')
+        logger.error(f"❌ Download {queue_id} falhou após {MAX_RETRIES} tentativas.")
+        try:
+            await client.send_message(
+                chat_id,
+                f"❌ **Falha no download após {MAX_RETRIES} tentativas.**\n"
+                f"📌 `{info.get('name', 'Desconhecido')}`\n"
+                f"🔢 Fila ID: `{queue_id}`\n"
+                f"_Motivo: {reason}_"
+            )
+        except Exception:
+            pass

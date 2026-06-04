@@ -44,10 +44,10 @@ def register_handlers():
                 display_name = format_item_name(item['info'])
                 
                 # Detalhes do progresso em tempo real
-                if current_download_progress:
-                    p = current_download_progress.get('percent', 0)
-                    s = current_download_progress.get('speed', 0)
-                    e = current_download_progress.get('etr', '--:--')
+                p = current_download_progress.get('percent', 0)
+                s = current_download_progress.get('speed', 0)
+                e = current_download_progress.get('etr', '--:--')
+                if p or s:
                     response += f"• `{display_name}`\n  └ ⏩ **{p}%** | 🚀 {s:.0f} KB/s | ⏳ {e} (ID: {item['id']})\n"
                 else:
                     response += f"• `{display_name}` (ID: {item['id']})\n"

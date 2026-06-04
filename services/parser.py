@@ -91,15 +91,16 @@ def parse_filename(filename: str, message_text: str = ""):
     res_file = _analyze(filename)
     
     def is_bad(res):
+        name = res['name'].strip()
         return (
-            not res['name'] or
-            len(res['name']) < 3 or 
-            res['name'].isdigit() or
-            "Desconhecido" in res['name'] or
-            "Desconhecida" in res['name'] or
-            "Temporada" in res['name'] or
-            "Season" in res['name'] or
-            '\n' in res['name']
+            not name or
+            len(name) < 3 or
+            name.isdigit() or
+            "Desconhecido" in name or
+            "Desconhecida" in name or
+            "Temporada" in name or
+            "Season" in name or
+            '\n' in name
         )
 
     # 1. Se a legenda identificou algo concreto (Filme/Série) e o nome é bom, use ela.

@@ -10,7 +10,8 @@ def format_time(seconds):
 
 def sanitize_filename(name):
     """Remove caracteres proibidos no Windows."""
-    return re.sub(r'[<>:"/\\|?*]', '', name).strip()
+    result = re.sub(r'[<>:"/\\|?*]', '', name).strip()
+    return result if result else "arquivo"
 
 def clean_release_name(text):
     """Limpa tags de release scene, mantendo o nome limpo."""
