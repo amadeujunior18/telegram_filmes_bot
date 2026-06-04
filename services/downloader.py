@@ -83,6 +83,16 @@ async def fast_download(client, msg, file, target_path, status_msg, progress_cal
 
     return target_path
 
+def _jellyfin_folder(name: str, year: str = None, tmdb_id: int = None) -> str:
+    """Monta nome de pasta no formato que o Jellyfin reconhece automaticamente."""
+    folder = name
+    if year and f"({year})" not in folder:
+        folder = f"{folder} ({year})"
+    if tmdb_id:
+        folder = f"{folder} {{tmdb-{tmdb_id}}}"
+    return folder
+
+
 def _write_info_txt(target_dir: str, info: dict):
     """Cria info.txt com metadados junto ao arquivo baixado."""
     if not info.get('synopsis') and not info.get('genres'):
@@ -120,20 +130,26 @@ async def perform_download(status_msg, original_msg, info):
     if not file_name:
         file_name = "video_sem_nome.mp4"
 
+    tmdb_id = info.get("tmdb_id")
+    year = info.get("year")
+    name = info["name"]
+
     if info["type"] == "movie":
-        target_dir = os.path.join(DOWNLOAD_DIR, "Filmes", info["name"])
+        folder = _jellyfin_folder(name, year, tmdb_id)
+        target_dir = os.path.join(DOWNLOAD_DIR, "Filmes", folder)
         ext = os.path.splitext(file_name)[1] or ".mp4"
-        final_name = sanitize_filename(f"{info['name']}{ext}")
+        final_name = sanitize_filename(f"{name}{ext}")
     elif info["type"] == "serie":
         season = info.get("season", 1)
-        target_dir = os.path.join(DOWNLOAD_DIR, "Series", info["name"], f"Season {season:02d}")
+        show_folder = _jellyfin_folder(name, year, tmdb_id)
+        target_dir = os.path.join(DOWNLOAD_DIR, "Series", show_folder, f"Season {season:02d}")
         ep_str = info.get("episode", "Episodio")
         ext = os.path.splitext(file_name)[1] or ".mp4"
-        final_name = sanitize_filename(f"{info['name']} - {ep_str}{ext}")
+        final_name = sanitize_filename(f"{name} - {ep_str}{ext}")
     else:
-        target_dir = os.path.join(DOWNLOAD_DIR, "Outros", info["name"])
+        target_dir = os.path.join(DOWNLOAD_DIR, "Outros", name)
         ext = os.path.splitext(file_name)[1] or ".mp4"
-        final_name = sanitize_filename(f"{info['name']}{ext}")
+        final_name = sanitize_filename(f"{name}{ext}")
 
     os.makedirs(target_dir, exist_ok=True)
     final_file_path = os.path.join(target_dir, final_name)

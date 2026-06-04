@@ -89,6 +89,7 @@ async def fetch_metadata_tmdb(query_name: str, media_type: str, api_key: str,
                 "genres": genres,
                 "synopsis": synopsis,
                 "type": media_type,
+                "tmdb_id": tmdb_id,
             }
 
     except asyncio.TimeoutError:

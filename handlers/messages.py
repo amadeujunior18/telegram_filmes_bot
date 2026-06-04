@@ -136,6 +136,7 @@ def register_handlers():
                 if meta.get('year'): info['year'] = meta['year']
                 if meta.get('synopsis'): info['synopsis'] = meta['synopsis']
                 if meta.get('genres'): info['genres'] = meta['genres']
+                if meta.get('tmdb_id'): info['tmdb_id'] = meta['tmdb_id']
                 
                 # Se era unknown e o bot achou, atualizamos o tipo
                 if info['type'] == 'unknown': info['type'] = meta['type']
