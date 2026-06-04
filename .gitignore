@@ -158,6 +158,9 @@ dmypy.json
 *.session
 *.session-journal
 
+# Fila de download (banco local gerado automaticamente)
+queue.db
+
 # pytype static type analyzer
 .pytype/
 
